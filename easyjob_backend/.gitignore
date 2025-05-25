@@ -79,7 +79,3 @@ celerybeat.pid
 *.bak
 *.tmp
 *~
-
-# Database
-*.sqlite3
-*.db 
