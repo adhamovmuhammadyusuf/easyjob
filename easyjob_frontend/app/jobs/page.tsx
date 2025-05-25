@@ -1,126 +1,250 @@
-'use client';
+"use client"
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { SearchBar } from '@/components/SearchBar';
-import { getJobs } from '@/lib/api/jobs';
-import JobCard from '@/components/job-card';
-import JobFilter from '@/components/job-filter';
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Search, MapPin, Clock, DollarSign } from "lucide-react"
+import { apiClient } from "@/lib/api"
 
-interface Job {
-  id: number;
-  title: string;
-  company_name: string;
-  description: string;
-  salary_range: string;
-  location: string;
-  created_at: string;
-  job_type: string;
-  company_logo?: string;
-  category_name: string;
-  skills_list: Array<{ id: number; name: string }>;
+interface Vacancy {
+  id: number
+  title: string
+  company_name: string
+  location: string
+  job_type: string
+  experience_level: string
+  salary_min: number
+  salary_max: number
+  created_at: string
+  skills_list: Array<{ id: number; name: string }>
 }
 
 interface Category {
-  id: number;
-  name: string;
-  icon: string;
-  vacancy_count: number;
+  id: number
+  name: string
 }
 
 export default function JobsPage() {
-  const searchParams = useSearchParams();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    search: searchParams.get('search') || '',
-    category: searchParams.get('category') || '',
-    location: searchParams.get('location') || '',
-    job_type: searchParams.get('job_type') || '',
-    salary_range: '',
-  });
+  const searchParams = useSearchParams()
+  const [jobs, setJobs] = useState<Vacancy[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "")
+  const [selectedJobType, setSelectedJobType] = useState("")
+  const [selectedExperience, setSelectedExperience] = useState("")
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setLoading(true);
-        const response = await getJobs(filters);
-        setJobs(response.results);
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchJobs()
+    fetchCategories()
+  }, [searchParams])
 
-    fetchJobs();
-  }, [filters]);
+  const fetchJobs = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
 
-  const handleSearch = (query: string) => {
-    setFilters(prev => ({ ...prev, search: query }));
-  };
+      if (searchQuery) params.append("search", searchQuery)
+      if (selectedCategory && selectedCategory !== "") params.append("category", selectedCategory)
+      if (selectedJobType && selectedJobType !== "" && selectedJobType !== "all_types")
+        params.append("job_type", selectedJobType)
+      if (selectedExperience && selectedExperience !== "") params.append("experience_level", selectedExperience)
 
-  const handleFilterChange = (newFilters: { location: string; salary: string; job_type: string }) => {
-    setFilters(prev => ({
-      ...prev,
-      location: newFilters.location,
-      salary_range: newFilters.salary,
-      job_type: newFilters.job_type
-    }));
-  };
+      const data = await apiClient.getVacancies(params)
+      setJobs(Array.isArray(data) ? data : data.results || [])
+    } catch (error) {
+      console.error("Error fetching jobs:", error)
+      setJobs([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const data = await apiClient.getCategories()
+      setCategories(Array.isArray(data) ? data : data.results || [])
+    } catch (error) {
+      console.error("Error fetching categories:", error)
+      setCategories([])
+    }
+  }
+
+  const handleSearch = () => {
+    const params = new URLSearchParams()
+    if (searchQuery) params.append("search", searchQuery)
+    if (selectedCategory && selectedCategory !== "") params.append("category", selectedCategory)
+    if (selectedJobType && selectedJobType !== "" && selectedJobType !== "all_types")
+      params.append("job_type", selectedJobType)
+    if (selectedExperience && selectedExperience !== "") params.append("experience_level", selectedExperience)
+
+    window.history.pushState({}, "", `/jobs?${params.toString()}`)
+    fetchJobs()
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 1) return "1 day ago"
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+    return `${Math.ceil(diffDays / 30)} months ago`
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Search Section */}      <section className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Find Your Next Job</h1>
-          <p className="text-blue-100 mb-8">Search through thousands of job listings</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search and Filters */}
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="md:col-span-2">
+              <Input
+                type="text"
+                placeholder="Search jobs, companies, skills..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
 
-          <div className="bg-white/95 p-4 rounded-lg shadow-md backdrop-blur-sm">
-            <SearchBar 
-              onSearch={handleSearch}
-              placeholder="Search by title, company, or keyword..."
-              initialValue={filters.search}
-              variant="light"
-            />
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.isArray(categories) &&
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedJobType} onValueChange={setSelectedJobType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Job Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all_types">All Types</SelectItem>
+                <SelectItem value="full_time">Full Time</SelectItem>
+                <SelectItem value="part_time">Part Time</SelectItem>
+                <SelectItem value="contract">Contract</SelectItem>
+                <SelectItem value="internship">Internship</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button onClick={handleSearch} className="w-full">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedCategory("")
+                setSelectedJobType("")
+                setSelectedExperience("")
+                setSearchQuery("")
+              }}
+              className="w-full"
+            >
+              Clear Filters
+            </Button>
           </div>
         </div>
-      </section>
 
-      {/* Filters and Jobs List */}
-      <section className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filters */}
-          <div className="lg:col-span-1">
-            <JobFilter onFilterChange={handleFilterChange} />
-          </div>
+        {/* Results */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">{loading ? "Loading..." : `${jobs.length} Jobs Found`}</h1>
+        </div>
 
-          {/* Jobs List */}
-          <div className="lg:col-span-3">
-            {loading ? (
-              <div className="grid gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-white p-6 rounded-lg shadow-sm animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
                   </div>
-                ))}
-              </div>
-            ) : jobs.length > 0 ? (
-              <div className="grid gap-6">
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Hech qanday ish topilmadi.</p>
-              </div>
-            )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      </section>
+        ) : (
+          <div className="grid grid-cols-1 gap-6">
+            {Array.isArray(jobs) &&
+              jobs.map((job) => (
+                <Card key={job.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          <Link href={`/jobs/${job.id}`} className="hover:text-blue-600">
+                            {job.title}
+                          </Link>
+                        </h3>
+                        <p className="text-gray-600 mb-4">{job.company_name}</p>
+
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            {job.location}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {job.job_type.replace("_", " ")}
+                          </div>
+                          <div className="flex items-center">
+                            <DollarSign className="h-4 w-4 mr-1" />${job.salary_min.toLocaleString()} - $
+                            {job.salary_max.toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Badge variant="secondary">{job.experience_level.replace("_", " ")}</Badge>
+                          {Array.isArray(job.skills_list) &&
+                            job.skills_list.slice(0, 3).map((skill) => (
+                              <Badge key={skill.id} variant="outline">
+                                {skill.name}
+                              </Badge>
+                            ))}
+                          {Array.isArray(job.skills_list) && job.skills_list.length > 3 && (
+                            <Badge variant="outline">+{job.skills_list.length - 3} more</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500 mb-4">{formatDate(job.created_at)}</p>
+                        <Button asChild>
+                          <Link href={`/jobs/${job.id}`}>View Details</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        )}
+
+        {!loading && jobs.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
+            <p className="text-gray-500">Try adjusting your search criteria</p>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }
