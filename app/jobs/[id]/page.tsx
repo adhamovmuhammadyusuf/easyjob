@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { MapPin, Clock, DollarSign, Building2, Calendar } from "lucide-react"
+import { MapPin, Clock, Building2, Calendar } from "lucide-react"
 import { apiClient } from "@/lib/api"
 import { useAuth } from "@/contexts/auth-context"
+import { translations } from "@/lib/translations"
 
 interface JobDetail {
   id: number
@@ -80,7 +81,7 @@ export default function JobDetailPage() {
 
   const handleApply = async () => {
     if (!selectedResume || !coverLetter.trim()) {
-      alert("Please select a resume and write a cover letter")
+      alert(translations.selectResumeAndCoverLetter)
       return
     }
 
@@ -92,14 +93,15 @@ export default function JobDetailPage() {
       setSelectedResume("")
     } catch (error) {
       console.error("Error applying to job:", error)
-      alert("Failed to submit application. Please try again.")
+      alert(translations.failedToSubmitApplication)
     } finally {
       setApplying(false)
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("uz-UZ", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -128,9 +130,9 @@ export default function JobDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Job Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{translations.jobNotFound}</h1>
           <Button asChild>
-            <Link href="/jobs">Back to Jobs</Link>
+            <Link href="/jobs">{translations.backToJobs}</Link>
           </Button>
         </div>
       </div>
@@ -148,9 +150,13 @@ export default function JobDetailPage() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
                 <div className="flex items-center text-lg text-gray-600 mb-4">
                   <Building2 className="h-5 w-5 mr-2" />
-                  <Link href={`/companies/${job.company.id}`} className="hover:text-blue-600">
-                    {job.company_name}
-                  </Link>
+                  {job.company && job.company.id ? (
+                    <Link href={`/companies/${job.company.id}`} className="hover:text-blue-600">
+                      {job.company_name}
+                    </Link>
+                  ) : (
+                    <span>{job.company_name || 'N/A'}</span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-6">
@@ -160,20 +166,19 @@ export default function JobDetailPage() {
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
-                    {job.job_type.replace("_", " ")}
+                    {job.job_type.replace("_", " ") === "full_time" ? translations.fullTime : job.job_type.replace("_", " ") === "part_time" ? translations.partTime : job.job_type.replace("_", " ") === "contract" ? translations.contract : job.job_type.replace("_", " ") === "internship" ? translations.internship : job.job_type.replace("_", " ")}
                   </div>
                   <div className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1" />${job.salary_min.toLocaleString()} - $
-                    {job.salary_max.toLocaleString()}
+                    {job.salary_min.toLocaleString()} {translations.currency} - {job.salary_max.toLocaleString()} {translations.currency}
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Posted {formatDate(job.created_at)}
+                    {translations.posted} {formatDate(job.created_at)}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{job.experience_level.replace("_", " ")}</Badge>
+                  <Badge variant="secondary">{job.experience_level.replace("_", " ") === "entry" ? translations.entry : job.experience_level.replace("_", " ") === "mid" ? translations.mid : job.experience_level.replace("_", " ") === "senior" ? translations.senior : job.experience_level.replace("_", " ")}</Badge>
                   {job.skills_list.map((skill) => (
                     <Badge key={skill.id} variant="outline">
                       {skill.name}
@@ -187,50 +192,54 @@ export default function JobDetailPage() {
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button size="lg" className="w-full">
-                        Apply Now
+                        {translations.applyNow}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Apply for {job.title}</DialogTitle>
+                        <DialogTitle>{translations.applyForJob.replace("{jobTitle}", job.title)}</DialogTitle>
                       </DialogHeader>
 
                       {applicationSuccess ? (
                         <div className="text-center py-6">
-                          <div className="text-green-600 text-lg font-semibold mb-2">Application Submitted!</div>
+                          <div className="text-green-600 text-lg font-semibold mb-2">{translations.applicationSubmitted}</div>
                           <p className="text-gray-600">
-                            Your application has been sent to {job.company_name}. You'll hear back from them soon.
+                            {translations.applicationSuccessMessage.replace("{companyName}", job.company_name)}
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Select Resume</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{translations.selectResume}</label>
                             <Select value={selectedResume} onValueChange={setSelectedResume}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Choose a resume" />
+                                <SelectValue placeholder={translations.chooseResume} />
                               </SelectTrigger>
                               <SelectContent>
-                                {resumes.map((resume) => (
-                                  <SelectItem key={resume.id} value={resume.id.toString()}>
-                                    {resume.title}
-                                  </SelectItem>
-                                ))}
+                                {resumes.length > 0 ? (
+                                  resumes.map((resume) => (
+                                    <SelectItem key={resume.id} value={resume.id.toString()}>
+                                      {resume.title}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <p className="p-2 text-sm text-gray-500">{translations.noResumesFound}</p>
+                                )}
                               </SelectContent>
                             </Select>
                             {resumes.length === 0 && (
                               <p className="text-sm text-gray-500 mt-1">
                                 <Link href="/resumes" className="text-blue-600 hover:underline">
-                                  Create a resume first
+                                  {translations.createResumeFirst}
                                 </Link>
                               </p>
                             )}
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Cover Letter</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{translations.coverLetter}</label>
                             <Textarea
-                              placeholder="Write a compelling cover letter..."
+                              placeholder={translations.writeCoverLetter}
                               value={coverLetter}
                               onChange={(e) => setCoverLetter(e.target.value)}
                               rows={6}
@@ -242,94 +251,79 @@ export default function JobDetailPage() {
                             disabled={applying || !selectedResume || !coverLetter.trim()}
                             className="w-full"
                           >
-                            {applying ? "Submitting..." : "Submit Application"}
+                            {applying ? translations.submitting : translations.submitApplication}
                           </Button>
                         </div>
                       )}
                     </DialogContent>
                   </Dialog>
                 ) : (
-                  <Button size="lg" asChild>
-                    <Link href="/login">Login to Apply</Link>
+                  <Button size="lg" className="w-full" asChild>
+                    <Link href="/login">{translations.loginToApply}</Link>
                   </Button>
                 )}
               </div>
             </div>
+
+            {/* Job Description and Requirements */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+              <div className="md:col-span-2">
+                <Card className="mb-8">
+                  <CardHeader>
+                    <CardTitle>{translations.description}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className="prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: job.description }}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{translations.requirements}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className="prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: job.requirements }}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Company Info */}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{translations.aboutCompany.replace("{companyName}", job.company_name)}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    {job.company.logo && (
+                      <img
+                        src={job.company.logo}
+                        alt={job.company.name}
+                        className="w-24 h-24 object-contain mx-auto mb-4"
+                      />
+                    )}
+                    <p className="text-gray-600 mb-4">{job.company.description}</p>
+                    {job.company.website && (
+                      <Button variant="outline" className="w-full mb-2" asChild>
+                        <a href={job.company.website} target="_blank" rel="noopener noreferrer">
+                          {translations.visitWebsite}
+                        </a>
+                      </Button>
+                    )}
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/companies/${job.company.id}`}>{translations.viewCompanyProfile}</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </CardContent>
         </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Job Details */}
-          <div className="lg:col-span-2 space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Job Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  {job.description.split("\n").map((paragraph, index) => (
-                    <p key={index} className="mb-4 text-gray-700">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  {job.requirements.split("\n").map((requirement, index) => (
-                    <p key={index} className="mb-4 text-gray-700">
-                      {requirement}
-                    </p>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Company Info */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>About {job.company.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center mb-4">
-                  {job.company.logo ? (
-                    <img
-                      src={job.company.logo || "/placeholder.svg"}
-                      alt={job.company.name}
-                      className="w-16 h-16 mx-auto object-contain"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Building2 className="h-8 w-8 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-gray-700 mb-4">{job.company.description}</p>
-
-                {job.company.website && (
-                  <Button variant="outline" className="w-full" asChild>
-                    <a href={job.company.website} target="_blank" rel="noopener noreferrer">
-                      Visit Website
-                    </a>
-                  </Button>
-                )}
-
-                <Button variant="outline" className="w-full mt-2" asChild>
-                  <Link href={`/companies/${job.company.id}`}>View Company Profile</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </div>
     </div>
   )

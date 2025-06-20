@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
+import { translations } from "@/lib/translations"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,9 +29,18 @@ export default function LoginPage() {
 
     try {
       await login(formData.email, formData.password)
-      router.push("/")
+
+      // Get user data to determine redirect
+      const userData = JSON.parse(localStorage.getItem("user") || "{}")
+
+      // Redirect based on user type
+      if (userData.user_type === "employer") {
+        router.push("/employer/dashboard")
+      } else {
+        router.push("/")
+      }
     } catch (error) {
-      setError("Invalid email or password")
+      setError(translations.invalidEmailOrPassword)
     } finally {
       setLoading(false)
     }
@@ -44,18 +54,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Sign in to EasyJob</CardTitle>
-          <p className="text-gray-600">Find your dream job today</p>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">{translations.login}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">{error}</div>}
-
-            <div>
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">{translations.email}</Label>
               <Input
                 id="email"
                 name="email"
@@ -63,12 +70,11 @@ export default function LoginPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter your email"
+                placeholder={translations.emailPlaceholder}
               />
             </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">{translations.password}</Label>
               <Input
                 id="password"
                 name="password"
@@ -76,23 +82,20 @@ export default function LoginPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter your password"
+                placeholder={translations.passwordPlaceholder}
               />
             </div>
-
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "..." : translations.login}
             </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/register" className="text-blue-600 hover:underline">
-                Sign up
+            <p className="text-center text-sm text-gray-600">
+              {translations.noAccount}{" "}
+              <Link href="/register" className="text-blue-600 hover:text-blue-500">
+                {translations.signUp}
               </Link>
             </p>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>

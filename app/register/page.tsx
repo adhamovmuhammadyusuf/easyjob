@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/contexts/auth-context"
+import { translations } from "@/lib/translations"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -33,16 +34,21 @@ export default function RegisterPage() {
     setError("")
 
     if (formData.password !== formData.password2) {
-      setError("Passwords do not match")
+      setError(translations.passwordsDoNotMatch)
       setLoading(false)
       return
     }
 
     try {
       await register(formData)
-      router.push("/")
+      // Redirect based on user type
+      if (formData.user_type === "employer") {
+        router.push("/employer/company")
+      } else {
+        router.push("/")
+      }
     } catch (error: any) {
-      setError(error.message || "Registration failed")
+      setError(error.message || translations.registrationFailed)
     } finally {
       setLoading(false)
     }
@@ -56,43 +62,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Join EasyJob</CardTitle>
-          <p className="text-gray-600">Create your account to get started</p>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">{translations.signUp}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">{error}</div>}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="first_name">First Name</Label>
-                <Input
-                  id="first_name"
-                  name="first_name"
-                  required
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  placeholder="First name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="last_name">Last Name</Label>
-                <Input
-                  id="last_name"
-                  name="last_name"
-                  required
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  placeholder="Last name"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">{translations.email}</Label>
               <Input
                 id="email"
                 name="email"
@@ -100,40 +78,67 @@ export default function RegisterPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter your email"
+                placeholder={translations.emailPlaceholder}
               />
             </div>
 
-            <div>
-              <Label htmlFor="phone_number">Phone Number</Label>
+            <div className="space-y-2">
+              <Label htmlFor="first_name">{translations.firstName}</Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                type="text"
+                required
+                value={formData.first_name}
+                onChange={handleChange}
+                placeholder={translations.firstNamePlaceholder}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last_name">{translations.lastName}</Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                type="text"
+                required
+                value={formData.last_name}
+                onChange={handleChange}
+                placeholder={translations.lastNamePlaceholder}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">{translations.phoneNumber}</Label>
               <Input
                 id="phone_number"
                 name="phone_number"
                 type="tel"
+                required
                 value={formData.phone_number}
                 onChange={handleChange}
-                placeholder="Enter your phone number"
+                placeholder={translations.phoneNumberPlaceholder}
               />
             </div>
 
-            <div>
-              <Label htmlFor="user_type">Account Type</Label>
+            <div className="space-y-2">
+              <Label htmlFor="user_type">{translations.userType}</Label>
               <Select
                 value={formData.user_type}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, user_type: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={translations.userType} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="job_seeker">Job Seeker</SelectItem>
-                  <SelectItem value="employer">Employer</SelectItem>
+                  <SelectItem value="job_seeker">{translations.jobSeeker}</SelectItem>
+                  <SelectItem value="employer">{translations.employer}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">{translations.password}</Label>
               <Input
                 id="password"
                 name="password"
@@ -141,12 +146,12 @@ export default function RegisterPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Create a password"
+                placeholder={translations.passwordPlaceholder}
               />
             </div>
 
-            <div>
-              <Label htmlFor="password2">Confirm Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password2">{translations.password}</Label>
               <Input
                 id="password2"
                 name="password2"
@@ -154,23 +159,23 @@ export default function RegisterPage() {
                 required
                 value={formData.password2}
                 onChange={handleChange}
-                placeholder="Confirm your password"
+                placeholder={translations.passwordPlaceholder}
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
-            </Button>
-          </form>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <Link href="/login" className="text-blue-600 hover:underline">
-                Sign in
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "..." : translations.signUp}
+            </Button>
+
+            <p className="text-center text-sm text-gray-600">
+              {translations.haveAccount}{" "}
+              <Link href="/login" className="text-blue-600 hover:text-blue-500">
+                {translations.login}
               </Link>
             </p>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
