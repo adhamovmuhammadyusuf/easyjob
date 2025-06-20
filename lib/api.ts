@@ -1,4 +1,4 @@
-export const API_URL = "https://easyjob.pythonanywhere.com/api/v1/";
+export const API_BASE_URL = "https://easyjob.pythonanywhere.com/api/v1/";
 
 export interface ApiResponse<T> {
   data: T
